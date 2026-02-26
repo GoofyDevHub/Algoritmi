@@ -146,3 +146,29 @@ void* StackPop(pStack_t myStack) {
     return myStack->data[--myStack->top]; 
 }
 
+/**
+ * @brief Restituisce l'elemento in cima allo stack senza estrarlo (Sola Lettura).
+ * * Permette di ispezionare il prossimo elemento che verrebbe restituito da una Pop, 
+ * lasciando inalterato lo stato logico e la dimensione dello stack.
+ * * @param myStack Puntatore allo stack da ispezionare.
+ * @return void* Puntatore al dato in cima. 
+ * @retval NULL   Se lo stack è invalido (NULL) o se è vuoto (Underflow).
+ */
+void* StackPeek(pStack_t myStack) {
+
+    // 1. Sicurezza: Lo stack esiste in memoria?
+    if (myStack == NULL) {
+        return NULL; 
+    }
+
+    // 2. Controllo Underflow: C'è almeno un elemento da leggere?
+    if (myStack->top == 0) {
+        return NULL; 
+    }
+
+    // 3. Ispezione (Read-Only)
+    // Sottraendo 1 a 'top' calcolo l'indice dell'ultimo dato inserito,
+    // ma la variabile 'top' all'interno della struct rimane intatta.
+    return myStack->data[myStack->top - 1]; 
+}
+
