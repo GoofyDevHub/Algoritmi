@@ -1,17 +1,29 @@
-/*
-primitive da implementare
-Stack stack_create(FreeFn free_fn);
-void stack_push(Stack s, void* data);
-void* stack_pop(Stack s);
-void* stack_peek(Stack s);
-int stack_size(Stack s);
-void stack_destroy(Stack s);
-
-*/
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include "../inc/common.h"
+
+/* ========================================================================= *
+ * MANIFESTO ARCHITETTURALE: LO STACK (PILA) E IL PRINCIPIO LIFO             *
+ * ========================================================================= *
+ * MECCANICA DI BASE:
+ * Lo Stack è una struttura dati lineare basata sul principio LIFO
+ * (Last-In, First-Out). L'ultimo elemento inserito è il primo a essere estratto.
+ * Immagina una pila di piatti: puoi aggiungere un piatto solo in cima (Push)
+ * e puoi togliere solo il piatto che si trova in cima (Pop).
+ * * IMPLEMENTAZIONE SOTTO IL COFANO (Array Dinamico):
+ * Invece di usare nodi concatenati sparsi nella memoria (che causano Cache Miss),
+ * questo stack usa un blocco di memoria contiguo (Array).
+ * - La variabile 'top' agisce come un cursore: indica l'indice del prossimo
+ * slot libero nell'array.
+ * - Quando l'array si riempie, la sua capacità viene raddoppiata (Crescita
+ * Geometrica). Questo garantisce che il costo computazionale dell'inserimento
+ * sia O(1) ammortizzato.
+ * * DESIGN OPACO E GENERICO:
+ * Lo stack non contiene i dati reali, ma solo i loro indirizzi di memoria (void**).
+ * Questo lo rende "agnostico": può impilare interi, stringhe o strutture
+ * complesse senza che il suo codice debba essere modificato.
+ * ========================================================================= */
 
 /* ========================================================================= *
  * STRUTTURE DATI E TIPI                                                     *
@@ -20,18 +32,19 @@ void stack_destroy(Stack s);
 /**
  * @struct Stack_t
  * @brief Rappresenta uno stack generico basato su array dinamico.
- * * L'utilizzo di void** permette allo stack di immagazzinare indirizzi 
- * di memoria di qualsiasi tipo di dato strutturato, disaccoppiando 
+ * * L'utilizzo di void** permette allo stack di immagazzinare indirizzi
+ * di memoria di qualsiasi tipo di dato strutturato, disaccoppiando
  * la logica della struttura dati dal payload effettivo.
  */
-typedef struct {
+typedef struct
+{
     void **data;     // Array dinamico di puntatori generici (void*)
     int capacity;    // Numero massimo di elementi attualmente ospitabili
     int top;         // Indice del prossimo slot libero (coincide con la size)
-} Stack_t; 
+    FreeFn_t freeFn; // Puntatore a funzione per la deallocazione automatica del payload
+} Stack_t;
 
-typedef Stack_t* pStack_t; 
-
+typedef Stack_t *pStack_t;
 
 /* ========================================================================= *
  * IMPLEMENTAZIONE DELLE FUNZIONI                                            *
@@ -39,154 +52,164 @@ typedef Stack_t* pStack_t;
 
 /**
  * @brief Inizializza un nuovo stack in memoria (Heap).
- * * Alloca lo spazio per la struttura di controllo e per l'array interno 
- * di puntatori. Se la capacità iniziale richiesta non è valida (<= 0), 
- * applica un fallback sicuro a 8 slot.
- * * @param initialCapacity Dimensione iniziale dell'array interno.
+ * * Alloca lo spazio per la struttura di controllo e per l'array interno.
+ * * @param initialCapacity Dimensione iniziale dell'array interno (minimo 8).
+ * @param freeFn Puntatore alla funzione custom per liberare i dati inseriti.
+ * Passare NULL se si desidera gestire la memoria manualmente.
  * @return pStack_t Puntatore allo stack creato, oppure NULL se la RAM è esaurita.
- * * @warning È responsabilità del chiamante liberare la memoria invocando 
- * una futura funzione StackDestroy() quando lo stack non serve più.
  */
-pStack_t StackCreate(int initialCapacity) {
-    
-    // 1. Allocazione del "guscio" di controllo
-    pStack_t myStack = (pStack_t)malloc(sizeof(Stack_t)); 
-    if (myStack == NULL) return NULL; 
+pStack_t StackCreate(int initialCapacity, FreeFn_t freeFn)
+{
 
-    // 2. Normalizzazione dell'input (Prevenzione allocazioni negative)
-    myStack->capacity = (initialCapacity > 0) ? initialCapacity : 8; 
+    pStack_t myStack = (pStack_t)malloc(sizeof(Stack_t));
+    if (myStack == NULL)
+        return NULL;
 
-    // 3. Allocazione dell'array dei dati
+    myStack->capacity = (initialCapacity > 0) ? initialCapacity : 8;
+
     // sizeof(void*) garantisce 8 byte su sistemi a 64-bit per ogni slot
-    myStack->data = (void**)malloc(myStack->capacity * sizeof(void*)); 
-    
-    // 4. Gestione sicura del fallimento a cascata
-    if (myStack->data == NULL) {
-        free(myStack); // Evita di lasciare il guscio orfano nella RAM
-        return NULL; 
+    myStack->data = (void **)malloc(myStack->capacity * sizeof(void *));
+
+    if (myStack->data == NULL)
+    {
+        free(myStack); // Evita memory leak del guscio
+        return NULL;
     }
 
-    // 5. Setup dello stato iniziale (Convenzione: top = prossimo slot vuoto)
-    myStack->top = 0; 
-    
-    return myStack;  
+    myStack->top = 0;
+    myStack->freeFn = freeFn;
+
+    return myStack;
 }
 
 /**
  * @brief Inserisce un nuovo elemento in cima allo stack (Push).
- * * L'operazione avviene in tempo O(1). Nel caso in cui l'array interno 
- * sia pieno, la funzione raddoppia automaticamente la capacità allocata 
- * (Crescita Geometrica), garantendo un tempo O(1) ammortizzato.
+ * * L'operazione avviene in tempo O(1) ammortizzato grazie alla realloc geometrica.
  * * @param myStack Puntatore allo stack di destinazione.
  * @param data    Puntatore (void*) al dato effettivo da immagazzinare.
- * @return true   Se l'inserimento è andato a buon fine.
- * @return false  Se lo stack è NULL o se il sistema operativo rifiuta di 
- * concedere ulteriore RAM durante il ridimensionamento.
- * * @note La funzione copia solo l'indirizzo di memoria (il puntatore). 
- * Il dato reale puntato da 'data' deve rimanere valido in memoria 
- * per tutto il tempo in cui risiede nello stack.
+ * @return true   Se l'inserimento è andato a buon fine, false in caso di errore.
  */
-bool StackPush(pStack_t myStack, void* data) {
+bool StackPush(pStack_t myStack, void *data)
+{
 
-    // Sicurezza: Evita la dereferenziazione di puntatori nulli
-    if (myStack == NULL) {
-        return false; 
+    if (myStack == NULL)
+    {
+        return false;
     }
 
-    // Controllo saturazione: top ha raggiunto il limite della capacità
-    if (myStack->capacity == myStack->top) {
-        int newCapacity = myStack->capacity * 2;  
-        
-        // Raddoppio della memoria usando un puntatore temporaneo.
-        // Se si usasse myStack->data direttamente e la realloc fallisse, 
-        // si perderebbe per sempre l'indirizzo dell'array originale.
-        void** tempData = (void**)realloc(myStack->data, newCapacity * sizeof(void*));   
-        
-        if (tempData == NULL) {
-            // RAM esaurita. Lo stack originale rimane intatto.
-            return false; 
+    // Controllo saturazione
+    if (myStack->capacity == myStack->top)
+    {
+        int newCapacity = myStack->capacity * 2;
+
+        // Uso un puntatore temporaneo per proteggere i dati originali in caso di fallimento
+        void **tempData = (void **)realloc(myStack->data, newCapacity * sizeof(void *));
+
+        if (tempData == NULL)
+        {
+            return false;
         }
-        
-        // Aggiornamento dei metadati post-espansione
-        myStack->data = tempData; 
+
+        myStack->data = tempData;
         myStack->capacity = newCapacity;
     }
 
-    // Inserimento del dato e avanzamento dell'indice (Post-incremento)
-    myStack->data[myStack->top] = data; 
-    myStack->top++; 
+    myStack->data[myStack->top] = data;
+    myStack->top++;
 
-    return true;      
+    return true;
 }
 
 /**
  * @brief Estrae e restituisce l'elemento in cima allo stack (Pop).
- * * L'operazione avviene in tempo costante. Il dato non viene sovrascritto 
- * fisicamente nell'array: l'indice 'top' viene semplicemente retrocesso, 
- * rendendo quello slot di memoria logicamente "libero" per la prossima operazione di Push.
+ * * L'operazione avviene in tempo O(1). Il dato non viene fisicamente cancellato
+ * dall'array; l'indice logico viene semplicemente retrocesso.
  * * @param myStack Puntatore allo stack da cui estrarre.
- * @return void* Puntatore al dato estratto. 
- * @retval NULL   Se lo stack è vuoto (Underflow) o se il puntatore passato non è valido.
+ * @return void* Puntatore al dato estratto. NULL in caso di stack vuoto o invalido.
  */
-void* StackPop(pStack_t myStack) {
-    
-    // 1. Sicurezza: Prevenzione dereferenziazione puntatore nullo
-    if (myStack == NULL) {
-        return NULL; 
-    }
+void *StackPop(pStack_t myStack)
+{
 
-    // 2. Controllo Underflow: Lo stack è vuoto (top == 0 indica zero elementi)
-    if (myStack->top == 0) {
+    if (myStack == NULL)
+    {
         return NULL;
     }
-    
-    // 3. Estrazione (Pre-decremento)
-    // Decremento l'indice top di 1 per puntare all'ultimo elemento valido, 
-    // dopodiché uso questo nuovo indice per accedere all'array e ritornare il dato.
-    return myStack->data[--myStack->top]; 
+
+    if (myStack->top == 0)
+    {
+        return NULL;
+    }
+
+    // Decremento logico e ritorno simultaneo
+    return myStack->data[--myStack->top];
 }
 
 /**
  * @brief Restituisce l'elemento in cima allo stack senza estrarlo (Sola Lettura).
- * * Permette di ispezionare il prossimo elemento che verrebbe restituito da una Pop, 
- * lasciando inalterato lo stato logico e la dimensione dello stack.
  * * @param myStack Puntatore allo stack da ispezionare.
- * @return void* Puntatore al dato in cima. 
- * @retval NULL   Se lo stack è invalido (NULL) o se è vuoto (Underflow).
+ * @return void* Puntatore al dato in cima. NULL in caso di stack vuoto o invalido.
  */
-void* StackPeek(pStack_t myStack) {
+void *StackPeek(pStack_t myStack)
+{
 
-    // 1. Sicurezza: Lo stack esiste in memoria?
-    if (myStack == NULL) {
-        return NULL; 
+    if (myStack == NULL)
+    {
+        return NULL;
     }
 
-    // 2. Controllo Underflow: C'è almeno un elemento da leggere?
-    if (myStack->top == 0) {
-        return NULL; 
+    if (myStack->top == 0)
+    {
+        return NULL;
     }
 
-    // 3. Ispezione (Read-Only)
-    // Sottraendo 1 a 'top' calcolo l'indice dell'ultimo dato inserito,
-    // ma la variabile 'top' all'interno della struct rimane intatta.
-    return myStack->data[myStack->top - 1]; 
+    return myStack->data[myStack->top - 1];
 }
 
 /**
  * @brief Restituisce il numero di elementi attualmente presenti nello stack.
- * * L'operazione è risolta in tempo O(1) leggendo direttamente la variabile di stato 'top'.
  * * @param myStack Puntatore allo stack da ispezionare.
- * @return int Numero di elementi presenti.
- * @retval -1 Se il puntatore allo stack passato come argomento è invalido (NULL).
+ * @return int Numero di elementi. Restituisce -1 in caso di stack invalido.
  */
-int StackSize(pStack_t myStack) {
+int StackSize(pStack_t myStack)
+{
 
-    // Sicurezza: prevenzione crash su puntatore inesistente
-    if (myStack == NULL) {
-        return -1; 
+    if (myStack == NULL)
+    {
+        return -1;
     }
 
-    // top coincide esattamente con la cardinalità dell'insieme
-    return myStack->top; 
+    return myStack->top;
 }
 
+/**
+ * @brief Distrugge lo stack e libera la RAM in modo sicuro.
+ * * Se alla creazione è stata fornita una funzione 'freeFn', questa funzione itererà
+ * su tutti gli elementi residui nello stack invocando la freeFn per liberare
+ * automaticamente il payload inserito dall'utente. Successivamente distrugge
+ * l'array interno e la struttura di controllo.
+ * * @param myStack Puntatore allo stack da distruggere.
+ * @return true Se la distruzione è avvenuta con successo, false altrimenti.
+ */
+bool StackDestroy(pStack_t myStack)
+{
+
+    if (myStack == NULL)
+    {
+        return false;
+    }
+
+    // 1. Pulizia opzionale e automatica dei dati inseriti dall'utente
+    if (myStack->freeFn != NULL)
+    {
+        for (int i = 0; i < myStack->top; i++)
+        {
+            myStack->freeFn(myStack->data[i]);
+        }
+    }
+
+    // 2. Distruzione infrastruttura interna
+    free(myStack->data);
+    free(myStack);
+
+    return true;
+}
