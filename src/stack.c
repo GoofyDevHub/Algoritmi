@@ -172,3 +172,21 @@ void* StackPeek(pStack_t myStack) {
     return myStack->data[myStack->top - 1]; 
 }
 
+/**
+ * @brief Restituisce il numero di elementi attualmente presenti nello stack.
+ * * L'operazione è risolta in tempo O(1) leggendo direttamente la variabile di stato 'top'.
+ * * @param myStack Puntatore allo stack da ispezionare.
+ * @return int Numero di elementi presenti.
+ * @retval -1 Se il puntatore allo stack passato come argomento è invalido (NULL).
+ */
+int StackSize(pStack_t myStack) {
+
+    // Sicurezza: prevenzione crash su puntatore inesistente
+    if (myStack == NULL) {
+        return -1; 
+    }
+
+    // top coincide esattamente con la cardinalità dell'insieme
+    return myStack->top; 
+}
+
