@@ -119,5 +119,30 @@ bool StackPush(pStack_t myStack, void* data) {
     return true;      
 }
 
+/**
+ * @brief Estrae e restituisce l'elemento in cima allo stack (Pop).
+ * * L'operazione avviene in tempo costante. Il dato non viene sovrascritto 
+ * fisicamente nell'array: l'indice 'top' viene semplicemente retrocesso, 
+ * rendendo quello slot di memoria logicamente "libero" per la prossima operazione di Push.
+ * * @param myStack Puntatore allo stack da cui estrarre.
+ * @return void* Puntatore al dato estratto. 
+ * @retval NULL   Se lo stack è vuoto (Underflow) o se il puntatore passato non è valido.
+ */
+void* StackPop(pStack_t myStack) {
+    
+    // 1. Sicurezza: Prevenzione dereferenziazione puntatore nullo
+    if (myStack == NULL) {
+        return NULL; 
+    }
 
+    // 2. Controllo Underflow: Lo stack è vuoto (top == 0 indica zero elementi)
+    if (myStack->top == 0) {
+        return NULL;
+    }
+    
+    // 3. Estrazione (Pre-decremento)
+    // Decremento l'indice top di 1 per puntare all'ultimo elemento valido, 
+    // dopodiché uso questo nuovo indice per accedere all'array e ritornare il dato.
+    return myStack->data[--myStack->top]; 
+}
 
