@@ -1,5 +1,8 @@
 #ifndef QUEUE_H
-#define QUEUE_H 
+#define QUEUE_H
+
+#include <stdbool.h>
+#include "common.h"
 
 typedef struct Queue_t *pQueue_t;
 
@@ -23,5 +26,20 @@ typedef struct Queue_t *pQueue_t;
  * per liberare l'infrastruttura quando non più necessaria.
  */
 pQueue_t QueueCreate(int capacity, FreeFn_t freeFn);
+
+/**
+ * @brief Inserisce un nuovo elemento in fondo alla coda (Enqueue).
+ * Sfrutta il ring buffer per garantire un inserimento in tempo $O(1)$ senza
+ * alcuno spostamento di memoria. Se la coda è satura, l'operazione viene
+ * abortita (Early Exit) per preservare l'integrità dello stato interno.
+ * @param myQueue Puntatore alla coda bersaglio.
+ * @param data    Puntatore (void*) al payload da memorizzare.
+ * @return true   Se l'inserimento è andato a buon fine.
+ * @return false  Se il puntatore alla coda è NULL o se la coda è già piena.
+ */
+bool QueueEnqueue(pQueue_t myQueue, void *data); 
+
+
+
 
 #endif // QUEUE_H
