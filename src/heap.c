@@ -1,3 +1,4 @@
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -38,37 +39,69 @@ struct Heap_t
 /* ========================================================================= *
  * FUNZIONI PRIVATE (MOTORE LOGICO E MATEMATICA DEGLI INDICI)                *
  * ========================================================================= */
-
+/**
+ * @brief Verifica in tempo $O(1)$ se l'Heap è privo di elementi vivi.
+ * @param myHeap Puntatore all'Heap.
+ * @return true Se la cardinalità logica è zero.
+ */
 static bool HeapIsEmpty(pHeap_t myHeap)
 {
     // Ritorna true solo se la cardinalità logica è zero
     return (myHeap->size == 0);
 }
 
+/**
+ * @brief Verifica in tempo $O(1)$ se l'array sottostante è saturo.
+ * @param myHeap Puntatore all'Heap.
+ * @return true Se la size ha raggiunto la capacity allocata in RAM.
+ */
 static bool HeapIsFull(pHeap_t myHeap)
 {
     // Confronta la cardinalità logica con il limite fisico allocato in RAM
     return (myHeap->size == myHeap->capacity);
 }
 
+/**
+ * @brief Calcola l'indice del nodo genitore in un albero binario implicito.
+ * Sfrutta il troncamento automatico della divisione tra interi in C per
+ * calcolare l'equazione matematica: $i_{parent} = \lfloor \frac{i - 1}{2} \rfloor$.
+ * @param index Indice del nodo figlio.
+ * @return int Indice del nodo padre.
+ */
 static int GetParent(int index)
 {
-    // Sfrutta il troncamento della divisione tra interi in C per emulare la funzione matematica floor()
     return (index - 1) / 2;
 }
 
+/**
+ * @brief Calcola l'indice del figlio sinistro.
+ * Equazione matematica: $i_{left} = 2i + 1$.
+ * @param index Indice del nodo genitore.
+ * @return int Indice del figlio sinistro.
+ */
 static int GetLeftChild(int index)
 {
-    // Salto di livello verso il basso a sinistra
     return (2 * index) + 1;
 }
 
+/**
+ * @brief Calcola l'indice del figlio destro.
+ * Equazione matematica: $i_{right} = 2i + 2$.
+ * @param index Indice del nodo genitore.
+ * @return int Indice del figlio destro.
+ */
 static int GetRightChild(int index)
 {
-    // Salto di livello verso il basso a destra
     return (2 * index) + 2;
 }
 
+/**
+ * @brief Esegue uno scambio atomico di due puntatori in memoria.
+ * Operazione base in tempo $O(1)$ per muovere il payload attraverso l'albero
+ * alterando solo gli indirizzi fisici e non i dati.
+ * @param a Puntatore al primo elemento.
+ * @param b Puntatore al secondo elemento.
+ */
 static void Swap(void **a, void **b)
 {
     // Scambio atomico dei puntatori fisici per muovere il payload senza copiarne i dati
@@ -77,6 +110,19 @@ static void Swap(void **a, void **b)
     *b = temp;
 }
 
+/**
+ * @brief Algoritmo di Sift-Down. Ripristina l'invariante dell'Heap dall'alto verso il basso.
+ * Cuore logico dell'operazione di estrazione (Extract). Quando una nuova radice
+ * viene posizionata in cima all'albero, questo algoritmo la fa "sprofondare"
+ * confrontandola iterativamente con i suoi figli.
+ * * Scelta Architetturale: A differenza delle implementazioni didattiche ricorsive,
+ * questa versione è strettamente iterativa (ciclo while). Questo previene i rischi
+ * di Stack Overflow e riduce la complessità spaziale a $O(1)$.
+ * * @param myHeap Puntatore all'Heap.
+ * @param index L'indice da cui far partire lo sprofondamento (solitamente 0).
+ * @note Costo Temporale: $O(\log N)$, proporzionale all'altezza dell'albero.
+ * Costo Spaziale: $O(1)$ (Iterativo).
+ */
 static void HeapifyDown(pHeap_t myHeap, int index)
 {
     int currentIndex = index;
@@ -119,6 +165,17 @@ static void HeapifyDown(pHeap_t myHeap, int index)
     }
 }
 
+/**
+ * @brief Algoritmo di Sift-Up. Ripristina l'invariante dell'Heap dal basso verso l'alto.
+ * Cuore logico dell'operazione di inserimento (Insert). Quando un nuovo elemento
+ * viene accodato all'array (nuova foglia), questo algoritmo lo fa "galleggiare"
+ * verso la radice confrontandolo esclusivamente con il proprio padre.
+ * La risalita è lineare e non prevede biforcazioni decisionali poiché in un
+ * albero ogni nodo ha esattamente un solo genitore.
+ * * @param myHeap Puntatore all'Heap.
+ * @param index L'indice della foglia di partenza (tipicamente myHeap->size - 1).
+ * @note Costo Temporale: $O(\log N)$ nel caso peggiore (risalita fino all'indice 0).
+ */
 static void HeapifyUp(pHeap_t myHeap, int index)
 {
     int currentIndex = index;
