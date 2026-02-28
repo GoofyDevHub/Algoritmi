@@ -46,6 +46,12 @@ struct Heap_t
  * FUNZIONI PRIVATE (MOTORE LOGICO)                                          *
  * ========================================================================= */
 
+
+ static bool HeapIsEmpty(pHeap_t myHeap)
+ {
+    return (myHeap->size == 0); 
+ }
+
 /**
  * @brief Calcola se l'heap o pieno o meno.
  */
@@ -250,4 +256,32 @@ bool HeapInsert(pHeap_t myHeap, void *data)
     HeapifyUp(myHeap, insertIndex);
 
     return true;
+}
+
+void *HeapExtract(pHeap_t myHeap)
+{
+    // 1. Sicurezza: Validazione puntatore e controllo Underflow
+    if (myHeap == NULL || myHeap->size == 0)
+    {
+        return NULL;
+    }
+
+    // 2. Salvataggio del dato a massima priorità (Radice all'indice 0)
+    void *temp = myHeap->data[0];
+
+    // 3. Spostamento dell'ultimo elemento foglia nella posizione della Radice
+    myHeap->data[0] = myHeap->data[myHeap->size - 1];
+
+    // 4. Rimozione logica dell'ultimo elemento
+    myHeap->size--;
+
+    // 5. Ripristino dell'invariante: faccio "sprofondare" la nuova radice
+    // (Ha senso farlo solo se è rimasto almeno un elemento nell'Heap)
+    if (myHeap->size > 0)
+    {
+        HeapifyDown(myHeap, 0);
+    }
+
+    // 6. Ritorno il dato originale
+    return temp;
 }

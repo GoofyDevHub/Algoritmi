@@ -45,4 +45,17 @@ pHeap_t HeapCreate(int capacity, CompareFn_t cmpFn, FreeFn_t freeFn);
  */
 bool HeapInsert(pHeap_t myHeap, void *data);
 
+/**
+ * @brief Estrae e restituisce l'elemento a massima/minima priorità (Radice).
+ * L'operazione rimuove l'elemento all'indice 0, lo sostituisce con l'ultimo
+ * elemento dell'array per mantenere la struttura di albero completo, e
+ * invoca il Sift-Down per ripristinare la regola dell'Heap.
+ * @param myHeap Puntatore all'Heap bersaglio.
+ * @return void* Puntatore al payload estratto.
+ * @retval NULL Se l'Heap è vuoto o il puntatore è invalido.
+ * @note Costo computazionale: $O(\log N)$ garantito per il riassetto dell'albero.
+ */
+void *HeapExtract(pHeap_t myHeap); 
+
+
 #endif // HEAP_H
