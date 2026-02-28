@@ -16,6 +16,7 @@ Strutture per la ricerca rapida.
 
 C
 // bst.h
+-
 typedef struct BST_t* BST;
 BST bst_create(CompareFn cmp, FreeFn free_fn);
 void bst_insert(BST tree, void* data);
