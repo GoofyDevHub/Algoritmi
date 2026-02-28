@@ -285,3 +285,19 @@ void *HeapExtract(pHeap_t myHeap)
     // 6. Ritorno il dato originale
     return temp;
 }
+
+void *HeapPeek(pHeap_t myHeap)
+{
+    if (myHeap == NULL || myHeap->size == 0)
+        return NULL;
+
+    return myHeap->data[0];
+}
+
+int HeapSize(pHeap_t myHeap)
+{
+    if (myHeap == NULL)
+        return -1;
+
+    return myHeap->size;
+}

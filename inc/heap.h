@@ -55,7 +55,23 @@ bool HeapInsert(pHeap_t myHeap, void *data);
  * @retval NULL Se l'Heap è vuoto o il puntatore è invalido.
  * @note Costo computazionale: $O(\log N)$ garantito per il riassetto dell'albero.
  */
-void *HeapExtract(pHeap_t myHeap); 
+void *HeapExtract(pHeap_t myHeap);
+
+/**
+ * @brief Restituisce l'elemento a massima priorità senza rimuoverlo.
+ * @param myHeap Puntatore all'Heap.
+ * @return void* Puntatore al dato in radice. NULL se vuoto o invalido.
+ * @note Costo: $O(1)$.
+ */
+void *HeapPeek(pHeap_t myHeap);
+
+/**
+ * @brief Restituisce la cardinalità dell'Heap.
+ * @param myHeap Puntatore all'Heap.
+ * @return int Numero di elementi vivi. -1 in caso di errore.
+ * @note Costo: $O(1)$.
+ */
+int HeapSize(pHeap_t myHeap); 
 
 
 #endif // HEAP_H
