@@ -1,0 +1,63 @@
+C
+// heap.h
+typedef struct Heap_t* Heap;
+// capacity è la dimensione iniziale dell'array dinamico
+Heap heap_create(int capacity, CompareFn cmp, FreeFn free_fn);
+void heap_insert(Heap h, void* data);
+void* heap_extract_top(Heap h);
+void* heap_peek(Heap h);
+// decrease_key serve a Dijkstra per aggiornare il costo di un nodo senza rompere l'Heap
+void heap_decrease_key(Heap h, void* old_data, void* new_data);
+void heap_destroy(Heap h);
+Algoritmi di Ordinamento (Sorting)
+Non richiedono una struct opaca perché operano in-place su blocchi di memoria già allocati.
+
+C
+// sorting.h
+#include <stddef.h> // per size_t
+
+// base: puntatore all'array
+// num_elements: quanti elementi ci sono
+// element_size: grandezza in byte di un singolo elemento (es. sizeof(int))
+void quicksort(void* base, size_t num_elements, size_t element_size, CompareFn cmp);
+void heapsort(void* base, size_t num_elements, size_t element_size, CompareFn cmp);
+
+// Il counting sort è l'unica anomalia: matematicamente non può essere generico 
+// su void*, funziona solo su interi o mapping diretti a interi.
+void countingsort(int* arr, int n, int max_val);
+Alberi e Hash Tables (Mappe Dizionario)
+Strutture per la ricerca rapida.
+
+C
+// bst.h
+typedef struct BST_t* BST;
+BST bst_create(CompareFn cmp, FreeFn free_fn);
+void bst_insert(BST tree, void* data);
+void* bst_search(BST tree, void* key); // La key e i dati potrebbero coincidere
+void bst_delete(BST tree, void* key);
+void bst_destroy(BST tree);
+
+// hashtable.h
+typedef struct HashTable_t* HashTable;
+HashTable ht_create(int initial_capacity, HashFn hash, CompareFn cmp, FreeFn free_key, FreeFn free_val);
+void ht_insert(HashTable ht, void* key, void* value);
+void* ht_get(HashTable ht, void* key);
+void ht_delete(HashTable ht, void* key);
+void ht_destroy(HashTable ht);
+Grafi
+L'apice della complessità, dove inizierai a includere gli altri moduli (es. queue.h per la BFS e heap.h per Dijkstra) direttamente all'interno del file .c del grafo.
+
+C
+// graph.h
+typedef struct Graph_t* Graph;
+// Identifichiamo i vertici con un intero (ID) per efficienza, 
+// mentre il 'data' associato è il void*
+Graph graph_create(int expected_vertices, CompareFn cmp_vertex_data, FreeFn free_vertex_data);
+int graph_add_vertex(Graph g, void* data); // Ritorna l'ID generato
+void graph_add_edge(Graph g, int src_id, int dest_id, int weight);
+void* graph_get_vertex_data(Graph g, int vertex_id);
+
+// Gli algoritmi avanzati non stampano a video, ma ritornano array allocati dinamicamente
+int* graph_bfs(Graph g, int start_id, int* out_count);
+int* graph_dijkstra(Graph g, int start_id, int dest_id, int* out_path_length);
+void graph_destroy(Graph g);
