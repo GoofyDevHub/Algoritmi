@@ -1,15 +1,8 @@
-/*
-// heap.h
-typedef struct Heap_t* Heap;
-// capacity è la dimensione iniziale dell'array dinamico
-Heap heap_create(int capacity, CompareFn cmp, FreeFn free_fn);
-void heap_insert(Heap h, void* data);
-void* heap_extract_top(Heap h);
-void* heap_peek(Heap h);
-// decrease_key serve a Dijkstra per aggiornare il costo di un nodo senza rompere l'Heap
-void heap_decrease_key(Heap h, void* old_data, void* new_data);
-void heap_destroy(Heap h);
-*/
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include "../inc/heap.h"
+#include "../inc/common.h"
 
 /*
 @section Descrizione di uno HEAP
@@ -24,14 +17,7 @@ void heap_destroy(Heap h);
     HEAP = parenti > figli
                              *MIN -
                          HEAP = parenti < figli
-*/ 
-
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include "../inc/heap.h"
-#include "../inc/common.h"
+*/
 
 struct Heap_t
 {
@@ -328,6 +314,30 @@ bool HeapUpdatePriority(pHeap_t myHeap, void *data)
     // il lavoro e HeapifyDown non entrerà nemmeno nel ciclo while. E viceversa.
     HeapifyUp(myHeap, targetIndex);
     HeapifyDown(myHeap, targetIndex);
+
+    return true;
+}
+
+bool HeapDestroy(pHeap_t myHeap)
+{
+    // Sicurezza: prevenzione crash su puntatore inesistente
+    if (myHeap == NULL)
+    {
+        return false;
+    }
+
+    // 1. Pulizia opzionale e automatica dei dati inseriti dall'utente
+    if (myHeap->freeFn != NULL)
+    {
+        for (int i = 0; i < myHeap->size; i++)
+        {
+            myHeap->freeFn(myHeap->data[i]);
+        }
+    }
+
+    // 2. Distruzione infrastruttura interna
+    free(myHeap->data);
+    free(myHeap);
 
     return true;
 }

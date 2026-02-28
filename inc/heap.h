@@ -84,6 +84,17 @@ int HeapSize(pHeap_t myHeap);
  * @return false  Se il puntatore è invalido o il dato non è presente nell'Heap.
  * * @note Costo ricerca: $O(N)$. Costo riordino: $O(\log N)$. Costo totale: $O(N)$.
  */
-bool HeapUpdatePriority(pHeap_t myHeap, void *data); 
+bool HeapUpdatePriority(pHeap_t myHeap, void *data);
+
+/**
+ * @brief Distrugge la Coda di Priorità e libera la RAM in modo sicuro.
+ * * Sfrutta la natura compatta dell'array dell'Heap (Albero Binario Completo)
+ * per eseguire una scansione lineare puramente fisica da 0 a size,
+ * massimizzando l'efficienza della CPU Cache durante la deallocazione.
+ * * @param myHeap Puntatore all'Heap da distruggere.
+ * @return true Se la distruzione è avvenuta con successo.
+ * @return false Se il puntatore passato è invalido (NULL).
+ */
+bool HeapDestroy(pHeap_t myHeap); 
 
 #endif // HEAP_H
