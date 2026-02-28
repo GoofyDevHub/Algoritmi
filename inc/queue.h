@@ -37,9 +37,17 @@ pQueue_t QueueCreate(int capacity, FreeFn_t freeFn);
  * @return true   Se l'inserimento è andato a buon fine.
  * @return false  Se il puntatore alla coda è NULL o se la coda è già piena.
  */
-bool QueueEnqueue(pQueue_t myQueue, void *data); 
+bool QueueEnqueue(pQueue_t myQueue, void *data);
 
-
+/**
+ * @brief Estrae e restituisce l'elemento in testa alla coda (Dequeue).
+ * L'operazione avviene in tempo $O(1)$ modificando esclusivamente gli indici logici,
+ * senza spostare fisicamente gli altri elementi in memoria.
+ * @param myQueue Puntatore alla coda bersaglio.
+ * @return void* Puntatore al payload estratto.
+ * @retval NULL Se la coda è vuota (Underflow) o il puntatore è invalido.
+ */
+void *QueueDequeue(pQueue_t myQueue);
 
 
 #endif // QUEUE_H

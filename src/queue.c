@@ -86,10 +86,9 @@ static void UpdateTail(pQueue_t myQueue)
     myQueue->tail = (myQueue->tail + 1) % myQueue->capacity;
 }
 
-
 bool QueueEnqueue(pQueue_t myQueue, void *data)
 {
-    
+
     // Sicurezza: Validazione del puntatore
     if (myQueue == NULL)
     {
@@ -110,4 +109,50 @@ bool QueueEnqueue(pQueue_t myQueue, void *data)
     myQueue->size++;
 
     return true;
+}
+
+/**
+ * @brief Verifica in tempo $O(1)$ se la coda è priva di elementi.
+ * @param myQueue Puntatore alla coda da ispezionare.
+ * @return true Se la variabile di stato 'size' è a 0.
+ * @return false Se è presente almeno un elemento.
+ */
+static bool QueueIsEmpty(pQueue_t myQueue)
+{
+    return (myQueue->size == 0);
+}
+
+/**
+ * @brief Fa avanzare l'indice di estrazione (head) applicando l'aritmetica modulare.
+ * @param myQueue Puntatore alla coda da aggiornare.
+ */
+static void UpdateHead(pQueue_t myQueue)
+{
+    myQueue->head = (myQueue->head + 1) % myQueue->capacity;
+}
+
+void *QueueDequeue(pQueue_t myQueue)
+{
+
+    // 1. Sicurezza: Validazione del puntatore
+    if (myQueue == NULL)
+    {
+        return NULL;
+    }
+
+    // 2. Sicurezza: Controllo Underflow (Invocazione corretta)
+    if (QueueIsEmpty(myQueue))
+    {
+        return NULL;
+    }
+
+    // 3. Salvataggio dell'indice attuale prima dell'aggiornamento
+    int tempHead = myQueue->head;
+
+    // 4. Aggiornamento dello stato logico
+    UpdateHead(myQueue);
+    myQueue->size--;
+
+    // 5. Ritorno del payload
+    return myQueue->data[tempHead];
 }
