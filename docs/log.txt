@@ -1,18 +1,4 @@
 C
-// heap.h
-typedef struct Heap_t* Heap;
-// capacity è la dimensione iniziale dell'array dinamico
-Heap heap_create(int capacity, CompareFn cmp, FreeFn free_fn);
-void heap_insert(Heap h, void* data);
-void* heap_extract_top(Heap h);
-void* heap_peek(Heap h);
-// decrease_key serve a Dijkstra per aggiornare il costo di un nodo senza rompere l'Heap
-void heap_decrease_key(Heap h, void* old_data, void* new_data);
-void heap_destroy(Heap h);
-Algoritmi di Ordinamento (Sorting)
-Non richiedono una struct opaca perché operano in-place su blocchi di memoria già allocati.
-
-C
 // sorting.h
 #include <stddef.h> // per size_t
 
@@ -30,6 +16,7 @@ Strutture per la ricerca rapida.
 
 C
 // bst.h
+-
 typedef struct BST_t* BST;
 BST bst_create(CompareFn cmp, FreeFn free_fn);
 void bst_insert(BST tree, void* data);
