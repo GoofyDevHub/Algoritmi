@@ -4,172 +4,144 @@
 #include "../inc/heap.h"
 #include "../inc/common.h"
 
-/*
-@section Descrizione di uno HEAP
-    *si tratta di una struttura dati gerarchica non lineare basata sugli alberi binari.
-        *affinchè un heap venga considerato tale devono valere le seguenti proprietà :
-            *HEAP SHAPE = albero deve essere completo,
-                  ovvero tutti i nodi devono avere 2 o 0 figli
-                      *meno che per ultimo ramo in cui è sufficiente che albero venga riempito da sinitra.
-                          *HEAP PROPERTY = una proprietà sui valori contenuti che ne determina un ORDINAMENTO PARZIALE,
-                  nel dettaglio :
-                      *MAX -
-    HEAP = parenti > figli
-                             *MIN -
-                         HEAP = parenti < figli
-*/
+/* ========================================================================= *
+ * MANIFESTO ARCHITETTURALE: LA CODA A PRIORITA' E L'HEAP BINARIO            *
+ * ========================================================================= *
+ * MECCANICA DI BASE (L'Astrazione):
+ * Una Coda a Priorità non si basa sul tempo di arrivo (FIFO) come una normale
+ * Queue, ma sull'importanza del dato. Immagina il Pronto Soccorso: non importa
+ * chi è arrivato prima, il "Codice Rosso" viene estratto e servito per primo.
+ * * L'IMPLEMENTAZIONE (L'Heap Binario):
+ * Dal punto di vista strutturale, l'Heap è un Albero Binario che rispetta
+ * due regole ferree:
+ * 1. HEAP SHAPE (Struttura): È un albero "completo". Tutti i livelli sono
+ * pieni, tranne al massimo l'ultimo, che deve essere riempito rigorosamente
+ * da sinistra verso destra. Nessun buco è permesso.
+ * 2. HEAP PROPERTY (Ordinamento Parziale): Ogni nodo Padre ha una priorità
+ * strettamente maggiore (o minore) rispetto a entrambi i suoi figli.
+ * * IL TRUCCO DELL'ALBERO IMPLICITO (Cache Locality):
+ * Invece di usare costosi nodi concatenati (struct con puntatori left/right),
+ * mappiamo l'albero su un Array Dinamico contiguo. Questo elimina l'overhead
+ * dei puntatori e massimizza la Cache Locality della CPU, risolvendo i legami
+ * padre-figlio con purissima e velocissima aritmetica degli indici in tempo O(1).
+ * ========================================================================= */
 
 struct Heap_t
 {
-    void **data; 
-    int capacity; 
-    int size; 
-    FreeFn_t freeFn; 
-    CompareFn_t cmpFn; 
+    void **data;
+    int capacity;
+    int size;
+    FreeFn_t freeFn;
+    CompareFn_t cmpFn;
 };
 
 /* ========================================================================= *
- * FUNZIONI PRIVATE (MOTORE LOGICO)                                          *
+ * FUNZIONI PRIVATE (MOTORE LOGICO E MATEMATICA DEGLI INDICI)                *
  * ========================================================================= */
 
+static bool HeapIsEmpty(pHeap_t myHeap)
+{
+    // Ritorna true solo se la cardinalità logica è zero
+    return (myHeap->size == 0);
+}
 
- static bool HeapIsEmpty(pHeap_t myHeap)
- {
-    return (myHeap->size == 0); 
- }
-
-/**
- * @brief Calcola se l'heap o pieno o meno.
- */
 static bool HeapIsFull(pHeap_t myHeap)
 {
+    // Confronta la cardinalità logica con il limite fisico allocato in RAM
     return (myHeap->size == myHeap->capacity);
 }
 
-/**
- * @brief Calcola l'indice del nodo padre.
- * Risolve l'equazione: Parent(i) = floor((i - 1) / 2)
- */
 static int GetParent(int index)
 {
+    // Sfrutta il troncamento della divisione tra interi in C per emulare la funzione matematica floor()
     return (index - 1) / 2;
 }
 
-/**
- * @brief Calcola l'indice del figlio sinistro.
- * Risolve l'equazione: LeftChild(i) = 2i + 1
- */
 static int GetLeftChild(int index)
 {
+    // Salto di livello verso il basso a sinistra
     return (2 * index) + 1;
 }
 
-/**
- * @brief Calcola l'indice del figlio destro.
- * Risolve l'equazione: RightChild(i) = 2i + 2
- */
 static int GetRightChild(int index)
 {
+    // Salto di livello verso il basso a destra
     return (2 * index) + 2;
 }
 
-/**
- * @brief Scambia fisicamente due puntatori in memoria.
- * Operazione atomica fondamentale per far salire o scendere i nodi (Sift-Up / Sift-Down).
- */
 static void Swap(void **a, void **b)
 {
+    // Scambio atomico dei puntatori fisici per muovere il payload senza copiarne i dati
     void *temp = *a;
     *a = *b;
     *b = temp;
 }
-/**
- * @brief Algoritmo di Sift-Down. Ripristina la proprietà dell'Heap dall'alto verso il basso.
- * * Confronta il nodo corrente con i suoi figli (se esistono). Se uno dei figli ha una
- * priorità maggiore (determinata dinamicamente dalla cmpFn), il nodo corrente viene
- * scambiato con il figlio "vincente". Il processo si ripete finché il nodo non
- * raggiunge una posizione valida o diventa una foglia.
- * * @param myHeap Puntatore all'Heap.
- * @param index L'indice da cui far partire lo sprofondamento (solitamente 0).
- * * @note Costo computazionale temporale: $O(\log N)$. Costo spaziale: $O(1)$ (Iterativo).
- */
+
 static void HeapifyDown(pHeap_t myHeap, int index)
 {
     int currentIndex = index;
 
     while (true)
     {
-        int extremeIndex = currentIndex; // Assumiamo che il nodo corrente sia il "vincente"
+        // 1. Assumiamo che il nodo corrente sia già nella posizione corretta
+        int extremeIndex = currentIndex;
+
+        // 2. Calcolo preventivo degli indici dei figli in tempo O(1)
         int leftChild = GetLeftChild(currentIndex);
         int rightChild = GetRightChild(currentIndex);
 
-        // 1. Controllo il figlio sinistro.
-        // Se esiste nell'array E se la cmpFn dice che è "maggiore/minore" del nodo corrente,
-        // diventa lui il nuovo candidato vincente.
+        // 3. Ispezione figlio sinistro: verifico che esista nell'array (leftChild < size)
+        // e chiedo al motore decisionale (cmpFn) se batte il genitore
         if (leftChild < myHeap->size &&
             myHeap->cmpFn(myHeap->data[leftChild], myHeap->data[extremeIndex]) > 0)
         {
-            extremeIndex = leftChild;
+            extremeIndex = leftChild; // Il sinistro è il nuovo candidato vincitore
         }
 
-        // 2. Controllo il figlio destro.
-        // Se esiste E se la cmpFn dice che batte il candidato vincente attuale
-        // (che potrebbe essere il nodo corrente o il figlio sinistro), aggiorniamo.
+        // 4. Ispezione figlio destro: verifico che esista e chiedo se batte il candidato attuale
+        // (che potrebbe essere il genitore o il figlio sinistro)
         if (rightChild < myHeap->size &&
             myHeap->cmpFn(myHeap->data[rightChild], myHeap->data[extremeIndex]) > 0)
         {
-            extremeIndex = rightChild;
+            extremeIndex = rightChild; // Il destro domina su entrambi
         }
 
-        // 3. Condizione di uscita: se l'extremeIndex è ancora il currentIndex,
-        // significa che il nodo è più "forte" di entrambi i figli. L'Heap è ripristinato.
+        // 5. Condizione di uscita: se il candidato vincitore è rimasto il nodo corrente,
+        // l'invariante dell'Heap è matematicamente ripristinata.
         if (extremeIndex == currentIndex)
         {
             break;
         }
 
-        // 4. Scambio fisico dei dati e avanzamento del ciclo
+        // 6. Esecuzione del collasso: scambio i puntatori in memoria e preparo il prossimo ciclo
         Swap(&myHeap->data[currentIndex], &myHeap->data[extremeIndex]);
         currentIndex = extremeIndex;
     }
 }
 
-/**
- * @brief Algoritmo di Sift-Up. Ripristina la proprietà dell'Heap dal basso verso l'alto.
- * Viene invocato tipicamente dopo l'inserimento di un nuovo elemento in coda all'array.
- * L'algoritmo confronta il nodo corrente esclusivamente con il proprio padre.
- * Se la cmpFn rileva che il figlio ha una priorità maggiore del padre, i due
- * vengono scambiati. La risalita si ferma quando si raggiunge la radice (indice 0)
- * o quando l'equilibrio è matematicamente ripristinato.
- * @param myHeap Puntatore all'Heap.
- * @param index L'indice di partenza (tipicamente l'ultimo elemento inserito).
- * @note Costo temporale nel caso peggiore (risalita fino alla radice): $O(\log N)$.
- */
 static void HeapifyUp(pHeap_t myHeap, int index)
 {
     int currentIndex = index;
 
-    // Condizione di sicurezza: la radice (indice 0) non ha un padre,
-    // quindi la risalita si deve fermare prima.
+    // Continua finché non raggiunge la radice assoluta dell'albero (indice 0)
     while (currentIndex > 0)
     {
-
+        // 1. Individuo matematicamente il genitore del nodo corrente
         int parentIndex = GetParent(currentIndex);
 
-        // Il motore decisionale agnostico: se il figlio batte il padre (> 0)
+        // 2. Chiedo al motore decisionale se il figlio ha una priorità maggiore del padre
         if (myHeap->cmpFn(myHeap->data[currentIndex], myHeap->data[parentIndex]) > 0)
         {
-
-            // Violazione rilevata: scambio i puntatori fisici nella RAM
+            // 3a. Violazione rilevata: scambio i nodi per far "galleggiare" il dato verso l'alto
             Swap(&myHeap->data[currentIndex], &myHeap->data[parentIndex]);
 
-            // Aggiorno l'indice per il prossimo ciclo di iterazione
+            // 3b. Aggiorno l'indice per il prossimo controllo al livello superiore
             currentIndex = parentIndex;
         }
         else
         {
-            // Early Exit: il nodo non ha la forza di battere il padre attuale.
-            // L'integrità strutturale dell'Heap è confermata, interrompo il ciclo.
+            // 4. Early Exit: il figlio ha una priorità minore o uguale al padre.
+            // L'integrità strutturale è confermata.
             break;
         }
     }
@@ -181,26 +153,30 @@ static void HeapifyUp(pHeap_t myHeap, int index)
 
 pHeap_t HeapCreate(int capacity, CompareFn_t cmpFn, FreeFn_t freeFn)
 {
-    // Sicurezza: Un heap senza funzione di confronto non può funzionare
+    // 1. Blocco critico: un Heap generico non sa ordinarsi senza la CompareFn
     if (cmpFn == NULL)
-    {
         return NULL;
-    }
 
+    // 2. Allocazione del guscio infrastrutturale
     pHeap_t myHeap = (pHeap_t)malloc(sizeof(struct Heap_t));
     if (myHeap == NULL)
         return NULL;
 
-    myHeap->capacity = (capacity > 0) ? capacity : 16; // Capacity base leggermente più ampia
+    // 3. Normalizzazione capacità: fallback a 16 per evitare array troppo piccoli
+    myHeap->capacity = (capacity > 0) ? capacity : 16;
     myHeap->size = 0;
 
+    // 4. Allocazione dell'array contiguo che ospiterà l'albero implicito
     myHeap->data = (void **)malloc(myHeap->capacity * sizeof(void *));
+
+    // 5. Prevenzione Memory Leak: se fallisce l'array, distruggo anche il guscio
     if (myHeap->data == NULL)
     {
         free(myHeap);
         return NULL;
     }
 
+    // 6. Iniezione delle dipendenze per l'ordinamento e la distruzione
     myHeap->cmpFn = cmpFn;
     myHeap->freeFn = freeFn;
 
@@ -209,36 +185,33 @@ pHeap_t HeapCreate(int capacity, CompareFn_t cmpFn, FreeFn_t freeFn)
 
 bool HeapInsert(pHeap_t myHeap, void *data)
 {
-    // Sicurezza: Validazione del puntatore
+    // 1. Controllo validità dell'infrastruttura
     if (myHeap == NULL)
         return false;
 
-    // Controllo saturazione e Riallocazione Geometrica
+    // 2. Gestione saturazione tramite Crescita Geometrica (costo O(N) ammortizzato su N inserimenti)
     if (HeapIsFull(myHeap))
     {
         int newCapacity = myHeap->capacity * 2;
 
-        // Allocazione su puntatore temporaneo per proteggere i dati in caso di fallimento
+        // Uso un puntatore temporaneo per non corrompere l'Heap in caso di esaurimento RAM
         void **tempData = (void **)realloc(myHeap->data, newCapacity * sizeof(void *));
 
         if (tempData == NULL)
             return false;
 
-        // Commit della transazione in memoria
         myHeap->data = tempData;
         myHeap->capacity = newCapacity;
     }
 
-    // 1. Salvataggio dell'indice di inserimento (0-indexed)
+    // 3. Posizionamento fisico del dato nell'ultimo slot logico dell'array (Nuova Foglia)
     int insertIndex = myHeap->size;
-
-    // 2. Inserimento fisico nell'ultimo slot libero
     myHeap->data[insertIndex] = data;
 
-    // 3. Aggiornamento dello stato logico
+    // 4. Aggiornamento cardinalità
     myHeap->size++;
 
-    // 4. Ripristino dell'invariante dell'Heap (Sift-Up)
+    // 5. Ripristino dell'ordine gerarchico tramite emersione (costo O(log N))
     HeapifyUp(myHeap, insertIndex);
 
     return true;
@@ -246,34 +219,32 @@ bool HeapInsert(pHeap_t myHeap, void *data)
 
 void *HeapExtract(pHeap_t myHeap)
 {
-    // 1. Sicurezza: Validazione puntatore e controllo Underflow
+    // 1. Controllo Underflow: non posso estrarre da un albero vuoto
     if (myHeap == NULL || myHeap->size == 0)
-    {
         return NULL;
-    }
 
-    // 2. Salvataggio del dato a massima priorità (Radice all'indice 0)
+    // 2. Salvataggio in cache locale del payload a massima priorità (Radice)
     void *temp = myHeap->data[0];
 
-    // 3. Spostamento dell'ultimo elemento foglia nella posizione della Radice
+    // 3. Usurpazione: sposto brutalmente l'ultima foglia dell'albero nella posizione della Radice
     myHeap->data[0] = myHeap->data[myHeap->size - 1];
 
-    // 4. Rimozione logica dell'ultimo elemento
+    // 4. Restringimento logico dell'array (l'ultima cella diventa spazzatura ignorata)
     myHeap->size--;
 
-    // 5. Ripristino dell'invariante: faccio "sprofondare" la nuova radice
-    // (Ha senso farlo solo se è rimasto almeno un elemento nell'Heap)
+    // 5. Se l'albero non è rimasto vuoto, faccio sprofondare l'usurpatore per ritrovare l'equilibrio
     if (myHeap->size > 0)
     {
         HeapifyDown(myHeap, 0);
     }
 
-    // 6. Ritorno il dato originale
+    // 6. Restituisco il dato originariamente in testa
     return temp;
 }
 
 void *HeapPeek(pHeap_t myHeap)
 {
+    // Semplice ispezione O(1) con controlli di sicurezza
     if (myHeap == NULL || myHeap->size == 0)
         return NULL;
 
@@ -293,11 +264,11 @@ bool HeapUpdatePriority(pHeap_t myHeap, void *data)
     if (myHeap == NULL || data == NULL || myHeap->size == 0)
         return false;
 
-    // 1. Ricerca lineare per trovare l'indice fisico del puntatore (Costo O(N))
+    // 1. Ricerca Lineare Costosa O(N): Poiché l'Heap non impone un ordine laterale,
+    // devo ispezionare tutta la RAM allocata per trovare il puntatore bersaglio.
     int targetIndex = -1;
     for (int i = 0; i < myHeap->size; i++)
     {
-        // Confronto diretto degli indirizzi di memoria fisici
         if (myHeap->data[i] == data)
         {
             targetIndex = i;
@@ -305,13 +276,12 @@ bool HeapUpdatePriority(pHeap_t myHeap, void *data)
         }
     }
 
-    // Early Exit: il dato non appartiene a questo Heap
+    // 2. Early exit: l'elemento non fa parte di questo Heap
     if (targetIndex == -1)
         return false;
 
-    // 2. Ripristino dell'invariante (Costo O(log N))
-    // Chiamiamo entrambi i motori. Se la priorità è salita, HeapifyUp farà
-    // il lavoro e HeapifyDown non entrerà nemmeno nel ciclo while. E viceversa.
+    // 3. Doppio colpo (Costo O(log N)): Poiché non so a priori se la priorità esterna
+    // è stata aumentata o diminuita, chiamo entrambi i motori. Solo uno farà davvero il lavoro.
     HeapifyUp(myHeap, targetIndex);
     HeapifyDown(myHeap, targetIndex);
 
@@ -320,13 +290,11 @@ bool HeapUpdatePriority(pHeap_t myHeap, void *data)
 
 bool HeapDestroy(pHeap_t myHeap)
 {
-    // Sicurezza: prevenzione crash su puntatore inesistente
     if (myHeap == NULL)
-    {
         return false;
-    }
 
-    // 1. Pulizia opzionale e automatica dei dati inseriti dall'utente
+    // 1. Pulizia dei payload: L'Heap garantisce che da 0 a size-1 la RAM sia contigua.
+    // Iterazione O(N) lineare pura, eccellente per il pre-fetching della CPU Cache.
     if (myHeap->freeFn != NULL)
     {
         for (int i = 0; i < myHeap->size; i++)
@@ -335,7 +303,7 @@ bool HeapDestroy(pHeap_t myHeap)
         }
     }
 
-    // 2. Distruzione infrastruttura interna
+    // 2. Deallocazione dell'infrastruttura fisica
     free(myHeap->data);
     free(myHeap);
 
