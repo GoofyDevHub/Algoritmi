@@ -301,3 +301,33 @@ int HeapSize(pHeap_t myHeap)
 
     return myHeap->size;
 }
+
+bool HeapUpdatePriority(pHeap_t myHeap, void *data)
+{
+    if (myHeap == NULL || data == NULL || myHeap->size == 0)
+        return false;
+
+    // 1. Ricerca lineare per trovare l'indice fisico del puntatore (Costo O(N))
+    int targetIndex = -1;
+    for (int i = 0; i < myHeap->size; i++)
+    {
+        // Confronto diretto degli indirizzi di memoria fisici
+        if (myHeap->data[i] == data)
+        {
+            targetIndex = i;
+            break;
+        }
+    }
+
+    // Early Exit: il dato non appartiene a questo Heap
+    if (targetIndex == -1)
+        return false;
+
+    // 2. Ripristino dell'invariante (Costo O(log N))
+    // Chiamiamo entrambi i motori. Se la priorità è salita, HeapifyUp farà
+    // il lavoro e HeapifyDown non entrerà nemmeno nel ciclo while. E viceversa.
+    HeapifyUp(myHeap, targetIndex);
+    HeapifyDown(myHeap, targetIndex);
+
+    return true;
+}

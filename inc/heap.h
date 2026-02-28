@@ -71,7 +71,19 @@ void *HeapPeek(pHeap_t myHeap);
  * @return int Numero di elementi vivi. -1 in caso di errore.
  * @note Costo: $O(1)$.
  */
-int HeapSize(pHeap_t myHeap); 
+int HeapSize(pHeap_t myHeap);
 
+/**
+ * @brief Aggiorna la posizione di un elemento dopo che la sua priorità è mutata.
+ * * Questa funzione (nota come DecreaseKey/IncreaseKey) scansiona l'array per
+ * trovare il puntatore specificato. Una volta individuato, invoca i motori
+ * di Sift-Up e Sift-Down per ripristinare l'equilibrio matematico dell'albero.
+ * * @param myHeap Puntatore all'Heap.
+ * @param data    Puntatore (void*) al payload la cui priorità è stata modificata.
+ * @return true   Se l'elemento è stato trovato e riordinato.
+ * @return false  Se il puntatore è invalido o il dato non è presente nell'Heap.
+ * * @note Costo ricerca: $O(N)$. Costo riordino: $O(\log N)$. Costo totale: $O(N)$.
+ */
+bool HeapUpdatePriority(pHeap_t myHeap, void *data); 
 
 #endif // HEAP_H
