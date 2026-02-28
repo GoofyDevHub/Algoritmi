@@ -1,13 +1,3 @@
-// queue.h
-typedef struct Queue_t* Queue;
-Queue queue_create(FreeFn free_fn);
-void queue_enqueue(Queue q, void* data);
-void* queue_dequeue(Queue q);
-int queue_size(Queue q);
-void queue_destroy(Queue q);
-Priority Queue (Min-Heap / Max-Heap)
-Il cuore degli algoritmi su grafi. L'albero decide chi "sale" e chi "scende" usando esclusivamente la CompareFn iniettata.
-
 C
 // heap.h
 typedef struct Heap_t* Heap;
