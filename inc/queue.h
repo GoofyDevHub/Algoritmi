@@ -71,7 +71,21 @@ void *QueuePeek(pQueue_t myQueue);
  * @return int Cardinalità dell'insieme.
  * @retval -1 Se il puntatore passato è invalido (NULL).
  */
-int QueueSize(pQueue_t myQueue); 
+int QueueSize(pQueue_t myQueue);
+
+/**
+ * @brief Distrugge la struttura dati e dealloca la memoria in sicurezza.
+ * * * Applicando il principio di incapsulamento, questa implementazione non
+ * manipola direttamente l'aritmetica modulare dell'array fisico. Sfrutta invece
+ * il motore logico della coda (Dequeue e IsEmpty) per svuotarla organicamente.
+ * Questo disaccoppia la logica di pulizia dall'implementazione fisica: se in
+ * futuro il motore interno passasse da Array Dinamico a Lista Concatenata,
+ * questa specifica funzione di distruzione non richiederebbe alcuna modifica.
+ * * @param myQueue Puntatore alla coda da distruggere.
+ * @return true Se l'infrastruttura e i dati residui sono stati deallocati.
+ * @return false Se il puntatore passato è invalido (NULL).
+ */
+bool QueueDestroy(pQueue_t myQueue); 
 
 
 #endif // QUEUE_H
