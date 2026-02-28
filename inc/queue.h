@@ -4,6 +4,10 @@
 #include <stdbool.h>
 #include "common.h"
 
+/* ========================================================================= *
+ * OPAQUE POINTER (INCAPSULAMENTO)                                           *
+ * ========================================================================= */
+
 typedef struct Queue_t *pQueue_t;
 
 /* ========================================================================= *
@@ -48,6 +52,26 @@ bool QueueEnqueue(pQueue_t myQueue, void *data);
  * @retval NULL Se la coda è vuota (Underflow) o il puntatore è invalido.
  */
 void *QueueDequeue(pQueue_t myQueue);
+
+/**
+ * @brief Restituisce l'elemento in testa alla coda senza estrarlo (Read-Only).
+ * Permette di ispezionare il prossimo elemento che verrebbe restituito da una
+ * Dequeue, lasciando inalterato lo stato logico della struttura.
+ * @param myQueue Puntatore alla coda da ispezionare.
+ * @return void* Puntatore al dato in testa.
+ * @retval NULL Se la coda è invalida o logicamente vuota (previene la lettura
+ * di dati fantasma nel ring buffer).
+ */
+void *QueuePeek(pQueue_t myQueue);
+
+/**
+ * @brief Restituisce il numero di elementi attualmente vivi nella coda.
+ * Risolta in tempo O(1) leggendo direttamente la variabile di stato.
+ * @param myQueue Puntatore alla coda.
+ * @return int Cardinalità dell'insieme.
+ * @retval -1 Se il puntatore passato è invalido (NULL).
+ */
+int QueueSize(pQueue_t myQueue); 
 
 
 #endif // QUEUE_H

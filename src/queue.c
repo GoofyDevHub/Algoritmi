@@ -156,3 +156,34 @@ void *QueueDequeue(pQueue_t myQueue)
     // 5. Ritorno del payload
     return myQueue->data[tempHead];
 }
+
+void *QueuePeek(pQueue_t myQueue)
+{
+
+    // 1. Sicurezza: Puntatore inesistente
+    if (myQueue == NULL)
+    {
+        return NULL;
+    }
+
+    // 2. Sicurezza: Prevenzione lettura dati fantasma (Underflow logico)
+    if (QueueIsEmpty(myQueue))
+    {
+        return NULL;
+    }
+
+    // 3. Ispezione (senza alterare gli indici)
+    return myQueue->data[myQueue->head];
+}
+
+int QueueSize(pQueue_t myQueue)
+{
+
+    // 1. Sicurezza: Puntatore inesistente
+    if (myQueue == NULL)
+    {
+        return -1;
+    }
+
+    return myQueue->size;
+}
